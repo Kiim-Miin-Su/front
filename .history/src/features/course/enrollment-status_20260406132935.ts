@@ -8,15 +8,8 @@ export interface EnrollmentStatusMeta {
   actionDisabled: boolean;
 }
 
-const enrollmentStatusDescriptionMap: Record<string, string> = {
-  "미수강": "아직 수강 권한이 없습니다. 결제 또는 관리자 승인 이후 학습을 시작할 수 있습니다.",
-  "승인 대기": "수강 승인 처리 전입니다. 승인 완료 후 플레이어 입장이 열립니다.",
-  "수강 중": "현재 수강 권한이 활성화되어 있습니다. 바로 학습을 이어서 진행할 수 있습니다.",
-  "수강 완료": "수강은 완료됐지만 현재 정책상 학습 플레이어는 활성 수강 상태에서만 진입합니다.",
-};
-
 export const enrollmentStatusMap: Record<EnrollmentStatus, EnrollmentStatusMeta> = {
-  NOT_ENROLLED: {
+  NOT_ENROLLED: { // backend에서 label 받아서 처리하기
     label: "미수강",
     className: "bg-slate-100 text-slate-700",
     description: "아직 수강 권한이 없습니다. 결제 또는 관리자 승인 이후 학습을 시작할 수 있습니다.",
@@ -45,31 +38,3 @@ export const enrollmentStatusMap: Record<EnrollmentStatus, EnrollmentStatusMeta>
     actionDisabled: true,
   },
 };
-
-export function getEnrollmentStatusDescription(
-  label?: string,
-  status?: EnrollmentStatus,
-) {
-  if (label) {
-    return enrollmentStatusDescriptionMap[label] ?? label;
-  }
-
-  if (status) {
-    return enrollmentStatusMap[status].description;
-  }
-
-  return "";
-}
-
-export function getEnrollmentStatusMeta(
-  status: EnrollmentStatus,
-  label?: string,
-): EnrollmentStatusMeta {
-  const baseMeta = enrollmentStatusMap[status];
-
-  return {
-    ...baseMeta,
-    label: label ?? baseMeta.label,
-    description: getEnrollmentStatusDescription(label, status),
-  };
-}

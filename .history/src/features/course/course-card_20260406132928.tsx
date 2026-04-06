@@ -1,14 +1,11 @@
 import Link from "next/link";
 
 import { EnrollmentStatusBadge } from "@/features/course/enrollment-status-badge";
-import { getEnrollmentStatusMeta } from "@/features/course/enrollment-status";
+import { enrollmentStatusMap } from "@/features/course/enrollment-status";
 import type { CourseSummary } from "@/types/course";
 
 export function CourseCard({ course }: { course: CourseSummary }) {
-	const statusMeta = getEnrollmentStatusMeta(
-		course.enrollmentStatus,
-		course.enrollmentStatusLabel,
-	);
+	const statusMeta = enrollmentStatusMap[course.enrollmentStatus];
 
 	return (
 		<article className="group overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
@@ -34,10 +31,7 @@ export function CourseCard({ course }: { course: CourseSummary }) {
 			</div>
 			<div className="p-6">
 				<div className="flex flex-wrap items-center gap-2">
-					<EnrollmentStatusBadge
-						status={course.enrollmentStatus}
-						label={course.enrollmentStatusLabel}
-					/>
+					<EnrollmentStatusBadge status={course.enrollmentStatus} />
 					{course.tags.map((tag) => (
 						<span
 							key={tag}

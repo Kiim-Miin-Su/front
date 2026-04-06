@@ -38,6 +38,7 @@ export interface CourseSummary {
   thumbnailTone: string;
   instructor: CourseInstructor;
   enrollmentStatus: EnrollmentStatus;
+  enrollmentStatusLabel?: string;
   isFeatured?: boolean;
 }
 

@@ -2,11 +2,14 @@ import Link from "next/link";
 
 import { CourseCurriculumAccordion } from "@/features/course/course-curriculum-accordion";
 import { EnrollmentStatusBadge } from "@/features/course/enrollment-status-badge";
-import { enrollmentStatusMap } from "@/features/course/enrollment-status";
+import { getEnrollmentStatusMeta } from "@/features/course/enrollment-status";
 import type { CourseDetail } from "@/types/course";
 
 export function CourseDetailView({ course }: { course: CourseDetail }) {
-  const statusMeta = enrollmentStatusMap[course.enrollmentStatus];
+  const statusMeta = getEnrollmentStatusMeta(
+    course.enrollmentStatus,
+    course.enrollmentStatusLabel,
+  );
   const previewLesson = course.curriculumPreview.find((lesson) => lesson.isPreview);
 
   return (
@@ -21,7 +24,10 @@ export function CourseDetailView({ course }: { course: CourseDetail }) {
           <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
             {course.level}
           </span>
-          <EnrollmentStatusBadge status={course.enrollmentStatus} />
+          <EnrollmentStatusBadge
+            status={course.enrollmentStatus}
+            label={course.enrollmentStatusLabel}
+          />
         </div>
         <h1 className="mt-5 max-w-3xl text-4xl font-semibold leading-tight tracking-tight">
           {course.title}
@@ -95,7 +101,10 @@ export function CourseDetailView({ course }: { course: CourseDetail }) {
             Enrollment
           </p>
           <div className="mt-4">
-            <EnrollmentStatusBadge status={course.enrollmentStatus} />
+            <EnrollmentStatusBadge
+              status={course.enrollmentStatus}
+              label={course.enrollmentStatusLabel}
+            />
           </div>
           <p className="mt-4 text-sm leading-6 text-slate-600">{statusMeta.description}</p>
           <div className="mt-6 rounded-2xl bg-slate-50 p-4">

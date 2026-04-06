@@ -84,6 +84,19 @@ Next.js App Router 기반 LMS 프론트엔드 초안입니다.
 - `src/types/course.ts`
 - `src/features/course/mock-course-data.ts`
 
+강의 타입 메모:
+
+- `CourseSummary` / `CourseDetail`는 내부 제어용 `enrollmentStatus`와 표시용 `enrollmentStatusLabel?`를 함께 가질 수 있습니다.
+- `enrollmentStatus`
+  - `"NOT_ENROLLED" | "PENDING" | "ACTIVE" | "COMPLETED"`
+  - 배지 톤, 액션 버튼 활성화 여부, 플레이어 진입 가능 여부 같은 프론트 제어 로직에 사용합니다.
+- `enrollmentStatusLabel`
+  - 백엔드가 내려주는 수강 상태 표시 문구입니다.
+  - 예: `미수강`, `승인 대기`, `수강 중`, `수강 완료`
+  - 배지 텍스트와 상태 설명 문구 생성의 기준값으로 사용합니다.
+- 수강 상태 설명(`description`)은 정적 필드가 아니라 `label -> description` 매핑으로 생성합니다.
+- 백엔드 `label`이 없으면 프론트는 기존 `enrollmentStatus` 기준 기본 문구로 fallback 합니다.
+
 ## 아직 구현되지 않은 부분
 
 이 저장소는 아직 프로덕션 준비 상태가 아닙니다. 아래 항목은 미구현 또는 목업 상태입니다.

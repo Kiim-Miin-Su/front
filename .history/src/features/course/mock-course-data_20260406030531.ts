@@ -1,7 +1,7 @@
 import type { CourseCatalog } from "@/types/course";
 
 export const mockCourseCatalog: CourseCatalog = {
-  featuredCourse: { // backend에서 받아서 사용하기
+  featuredCourse: {
     id: "course-next-ai-lms",
     slug: "nextjs-ai-lms-foundation",
     title: "Next.js로 시작하는 AI LMS 프론트엔드",

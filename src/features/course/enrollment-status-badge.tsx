@@ -1,12 +1,14 @@
-import { enrollmentStatusMap } from "@/features/course/enrollment-status";
+import { getEnrollmentStatusMeta } from "@/features/course/enrollment-status";
 import type { EnrollmentStatus } from "@/types/course";
 
 export function EnrollmentStatusBadge({
   status,
+  label,
 }: {
   status: EnrollmentStatus;
+  label?: string;
 }) {
-  const content = enrollmentStatusMap[status];
+  const content = getEnrollmentStatusMeta(status, label);
 
   return (
     <span
