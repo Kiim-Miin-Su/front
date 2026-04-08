@@ -6,6 +6,10 @@ export type EnrollmentStatus =
   | "ACTIVE"
   | "COMPLETED";
 
+export type CourseSortOption = "RECOMMENDED" | "LATEST" | "POPULAR";
+export type CourseDurationRange = "UNDER_10_HOURS" | "BETWEEN_10_AND_15_HOURS" | "OVER_15_HOURS";
+export type CoursePriceRange = "FREE" | "UNDER_50K" | "BETWEEN_50K_AND_80K" | "OVER_80K";
+
 export interface CourseInstructor {
   name: string;
   title: string;
@@ -51,4 +55,25 @@ export interface CourseCatalog {
   featuredCourse: CourseDetail;
   courses: CourseDetail[];
   categories: string[];
+}
+
+export interface CourseSearchQuery {
+  page: number;
+  size: number;
+  sort: CourseSortOption;
+  keyword?: string;
+  category?: string;
+  durationRange?: CourseDurationRange;
+  priceRange?: CoursePriceRange;
+  freeOnly?: boolean;
+  discountOnly?: boolean;
+  roadmapOnly?: boolean;
+}
+
+export interface CourseSearchResult {
+  items: CourseDetail[];
+  page: number;
+  size: number;
+  totalPages: number;
+  totalElements: number;
 }

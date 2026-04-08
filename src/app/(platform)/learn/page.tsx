@@ -1,4 +1,4 @@
-import { LearnPlayerView } from "@/features/course/learn-player-view";
+import { LearnPlayerView } from "@/features/learn/learn-player-view";
 import { fetchLearnCourse, fetchMyLearningCourses } from "@/services/course";
 
 export default async function LearnPage({

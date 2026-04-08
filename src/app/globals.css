@@ -34,3 +34,9 @@ a {
     radial-gradient(circle at top left, rgba(15, 118, 110, 0.1), transparent 28%),
     linear-gradient(180deg, #f6f1e8 0%, #ffffff 100%);
 }
+
+.monaco-editor .suggest-widget,
+.monaco-editor .parameter-hints-widget,
+.monaco-editor .monaco-hover {
+  z-index: 9999 !important;
+}

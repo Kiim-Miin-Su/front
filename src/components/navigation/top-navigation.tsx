@@ -3,15 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import {
+  navigationFeatureFlags,
+  topNavigationPrimaryLinks,
+} from "@/config/navigation";
 import { useAuthStore } from "@/store/auth-store";
-
-const primaryLinks = [
-  { href: "/", label: "홈" },
-  { href: "/courses", label: "강의 탐색" },
-  { href: "/learn", label: "학습" },
-  { href: "/student", label: "학생" },
-  { href: "/instructor", label: "강사" },
-];
 
 function isActive(pathname: string, href: string) {
   if (href === "/") {
@@ -25,7 +21,7 @@ export function TopNavigation() {
   const pathname = usePathname();
   const user = useAuthStore((state) => state.user);
   const role = useAuthStore((state) => state.getRole());
-  const showAttendanceAction = true;
+  const showAttendanceAction = navigationFeatureFlags.showAttendanceShortcut;
 
   return (
     <header className="border-b border-slate-200/80 bg-white/85 backdrop-blur">
@@ -35,7 +31,7 @@ export function TopNavigation() {
             AI Edu LMS
           </Link>
           <nav className="hidden items-center gap-2 md:flex">
-            {primaryLinks.map((link) => {
+            {topNavigationPrimaryLinks.map((link) => {
               const active = isActive(pathname, link.href);
 
               return (

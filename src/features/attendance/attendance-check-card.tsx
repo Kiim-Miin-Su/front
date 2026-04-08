@@ -1,18 +1,38 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
+import { AttendanceCheckInButton } from "@/features/attendance/attendance-check-in-button";
+import {
+  attendanceOverviewStatusLabelMap,
+  attendanceOverviewStatusToneClassMap,
+} from "@/features/attendance/attendance-ui-config";
 import type { AttendanceOverview } from "@/types/attendance";
-
-const statusLabelMap: Record<AttendanceOverview["status"], string> = {
-  NOT_CHECKED_IN: "출석 전",
-  CHECKED_IN: "출석 완료",
-  LATE: "지각 체크",
-};
 
 export function AttendanceCheckCard({
   attendance,
+  onSubmitCode,
+  isSubmitting = false,
+  feedback,
 }: {
   attendance: AttendanceOverview;
+  onSubmitCode?: (code: string) => Promise<void> | void;
+  isSubmitting?: boolean;
+  feedback?: {
+    type: "success" | "error";
+    message: string;
+  };
 }) {
+  const [code, setCode] = useState("");
+  const actionDisabled = !attendance.canCheckInNow;
+
+  useEffect(() => {
+    if (feedback?.type === "success") {
+      setCode("");
+    }
+  }, [feedback?.type]);
+
   return (
     <article className="rounded-[28px] border border-emerald-200 bg-gradient-to-br from-[#f0fbe8] via-[#eff9de] to-[#f7fde9] p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
@@ -25,8 +45,10 @@ export function AttendanceCheckCard({
             {attendance.programName} · {attendance.className}
           </p>
         </div>
-        <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-[#45631b]">
-          {statusLabelMap[attendance.status]}
+        <span
+          className={`rounded-full px-3 py-1 text-xs font-semibold ${attendanceOverviewStatusToneClassMap[attendance.status]}`}
+        >
+          {attendanceOverviewStatusLabelMap[attendance.status]}
         </span>
       </div>
 
@@ -53,37 +75,80 @@ export function AttendanceCheckCard({
 
       <div className="mt-4 rounded-2xl border border-dashed border-emerald-200 bg-white/70 p-4">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6a8540]">
-          관리자 연결 기준
+          출석 인증
         </p>
         <p className="mt-2 text-sm leading-6 text-[#4f6728]">
           출석은 강의별이 아니라 과정/반 단위 일정과 연결됩니다. 캘린더에서 권한이 있는 일정만
           보이고, 그중 필수 출석 일정이 이 카드에 자동 반영됩니다.
         </p>
-        <div className="mt-4 flex items-center gap-2">
-          {Array.from({ length: attendance.expectedCodeLength }).map((_, index) => (
-            <span
-              key={index}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-100 bg-white text-sm font-semibold text-[#6a8540]"
+        {attendance.checkedAtLabel ? (
+          <p className="mt-2 text-xs font-semibold text-emerald-700">
+            인증 완료 시각: {attendance.checkedAtLabel}
+          </p>
+        ) : null}
+        {attendance.checkInDisabledReason ? (
+          <p
+            className={`mt-2 text-xs font-semibold ${
+              attendance.status === "ABSENT" ? "text-rose-600" : "text-amber-700"
+            }`}
+          >
+            {attendance.checkInDisabledReason}
+          </p>
+        ) : null}
+        {attendance.supportsCodeCheckIn && onSubmitCode ? (
+          <form
+            className="mt-4 flex flex-col gap-2"
+            onSubmit={async (event) => {
+              event.preventDefault();
+
+              if (actionDisabled) {
+                return;
+              }
+
+              await onSubmitCode(code);
+            }}
+          >
+            <label className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6a8540]">
+              인증코드 입력
+            </label>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                value={code}
+                onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
+                inputMode="numeric"
+                maxLength={attendance.expectedCodeLength}
+                placeholder={`${attendance.expectedCodeLength}자리 코드`}
+                className="h-10 min-w-[170px] rounded-full border border-emerald-200 bg-white px-4 text-sm font-semibold text-[#355314] outline-none placeholder:text-[#8ca16b]"
+              />
+              <AttendanceCheckInButton disabled={actionDisabled} isSubmitting={isSubmitting} />
+            </div>
+          </form>
+        ) : (
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled
+              className="inline-flex h-10 items-center rounded-full bg-white px-4 text-sm font-semibold text-[#355314] disabled:cursor-not-allowed disabled:opacity-80"
             >
-              •
-            </span>
-          ))}
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled={!attendance.supportsCodeCheckIn}
-            className="inline-flex h-10 items-center rounded-full bg-white px-4 text-sm font-semibold text-[#355314] disabled:cursor-not-allowed disabled:opacity-80"
+              인증코드 입력 기능 준비 중
+            </button>
+            <Link
+              href={attendance.calendarTabHref}
+              className="inline-flex h-10 items-center rounded-full border border-emerald-200 bg-transparent px-4 text-sm font-semibold text-[#355314]"
+            >
+              캘린더 탭 열기
+            </Link>
+          </div>
+        )}
+        {feedback ? (
+          <p
+            className={`mt-3 text-sm font-semibold ${
+              feedback.type === "success" ? "text-emerald-700" : "text-rose-600"
+            }`}
           >
-            인증코드 입력 기능 예정
-          </button>
-          <Link
-            href={attendance.calendarTabHref}
-            className="inline-flex h-10 items-center rounded-full border border-emerald-200 bg-transparent px-4 text-sm font-semibold text-[#355314]"
-          >
-            캘린더 탭 열기
-          </Link>
-        </div>
+            {feedback.message}
+          </p>
+        ) : null}
       </div>
     </article>
   );

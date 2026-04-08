@@ -1,202 +1,106 @@
-# Frontend Info
+# Frontend Architecture Info (2026-04-09)
 
-## 목적
-이 레포는 AI 기반 LMS의 프론트엔드 레포다.  
-역할은 크게 4개다.
+## 문서 범위
+- 프론트 기술/구조 기준 문서.
+- 백엔드는 “프론트가 기대하는 API 계약”만 기록한다.
 
-- 강의 탐색과 상세 페이지 제공
-- 학생의 강의 수강과 진도 확인
-- 강사의 강의 생성 및 운영
-- AI 학습 보조 UI 제공
+## 스택
+- Next.js App Router
+- React + TypeScript
+- Tailwind CSS
+- Zustand
+- Monaco Editor
 
----
+## 구조
+1. App Layer (`src/app`)
+- 라우팅/페이지 진입점.
+- 제출 상세 라우트: `/submissions/[submissionId]`.
+- 관리자 운영 라우트: `/admin` (공휴일 + 강사 담당 과정 매핑).
 
-## 현재 폴더 구조
-```text
-front
-├─ src
-│  ├─ app
-│  │  ├─ (marketing)
-│  │  ├─ (auth)
-│  │  ├─ courses
-│  │  ├─ learn
-│  │  ├─ student
-│  │  ├─ instructor
-│  │  └─ admin
-│  ├─ components
-│  ├─ features
-│  │  ├─ auth
-│  │  ├─ course
-│  │  ├─ curriculum
-│  │  ├─ video-player
-│  │  ├─ ai-chat
-│  │  ├─ assignment
-│  │  └─ analytics
-│  ├─ lib
-│  ├─ hooks
-│  ├─ services
-│  ├─ store
-│  └─ types
-├─ public
-└─ package.json
-```
+2. Feature Layer (`src/features`)
+- 제출 핵심:
+  - `student-submission-workspace.tsx`
+  - `instructor-console-workspace.tsx`
+  - `submission-detail-workspace.tsx`
+  - `submission-ide-editor.tsx`
+- 관리자 핵심:
+  - `admin-holiday-manager.tsx`
+  - `admin-instructor-course-manager.tsx`
 
----
+3. Service Layer (`src/services/submission.ts`)
+- API 호출 표준화 + fallback 처리.
+- 관리자 서비스: `src/services/admin.ts`
 
-## 폴더 역할
-### `src/app`
-Next.js App Router 엔트리다.
+4. Type Layer (`src/types/submission.ts`)
+- 제출 도메인 타입 단일 소스.
+- 관리자 타입: `src/types/admin.ts`
 
-- `(marketing)`: 랜딩, 소개, 홍보 페이지
-- `(auth)`: 로그인, 회원가입, OAuth 콜백
-- `courses`: 강의 목록, 검색, 강의 상세
-- `learn`: 실제 수강 플레이어
-- `student`: 학생 대시보드
-- `instructor`: 강사 강의 관리
-- `admin`: 관리자 통계/운영
+## 제출 도메인 원칙
+1. 화면 책임 분리
+- 목록(학생/강사): 메타/요약/필터 중심.
+- 상세(`/submissions/{id}`): 코드/피드백/타임라인 전체 + 리뷰 액션.
 
-### `src/components`
-여러 기능에서 공통으로 쓰는 프레젠테이션 컴포넌트다.
+2. 강사 콘솔 모드
+- `NEW_ASSIGNMENT`: 신규 과제 업로드.
+- `TEMPLATE_AUTHORING`: 템플릿 작성/저장.
+- 두 모드는 상단 토글로 전환하며, 템플릿 반영은 `템플릿 저장하기` 버튼에서만 발생.
+- 최근 사용 내역 카드에서 템플릿 대상 선택과 반복 프리셋 적용을 함께 처리한다.
 
-예시:
-- 버튼
-- 카드
-- 모달
-- 배지
-- 테이블
+3. 상태 정책
+- enum: `SUBMITTED | REVIEWED | NEEDS_REVISION`
+- UI 라벨: `SUBMITTED`는 `재검토`로 표시.
 
-### `src/features`
-도메인별 UI와 로직을 모은다.
+4. 상세 리뷰 액션
+- 상태 변경과 피드백 저장을 분리하지 않고 `리뷰하기` 단일 액션으로 처리.
+- 입력: 상태, 리뷰 제목, 메시지, 코드, 첨부파일.
 
-예시:
-- `course`: 강의 카드, 강의 목록 필터, 강의 상세 섹션
-- `curriculum`: 섹션/레슨 리스트, 커리큘럼 편집
-- `video-player`: 플레이어, 배속, 완료 처리, 다음 강의 이동
-- `ai-chat`: AI 질문창, 답변 카드, 요약/퀴즈 변환 버튼
-- `assignment`: 과제 제출 폼, 피드백 보기
+## 저장/동기화
+- 기본: API 우선.
+- 실패 시 localStorage fallback:
+  - `ai-edu-submission-db-v1`
+  - `ai-edu-submission-drafts-v1`
+- draft 키: `studentId:assignmentId` (`editorType`, `codeLanguage`, `message`, `code`, `updatedAt`).
 
-### `src/services`
-백엔드 API 통신을 담당한다.
+## 프론트가 요구하는 최소 API
+- `GET /me/assignments/workspace`
+- `POST /me/assignments/submissions`
+- `GET /instructor/assignments/workspace`
+- `POST /instructor/assignments`
+- `PUT /instructor/assignments/{assignmentId}/template`
+- `PATCH /instructor/assignments/submissions/{submissionId}`
+- `POST /instructor/assignments/submissions/{submissionId}/feedback`
+- `POST /instructor/videos/upload`
+- `GET /submissions/{submissionId}`
+- `GET /instructor/assignments/{assignmentId}/timeline` (과제 전체 타임라인 탭)
+- `GET /admin/instructor-courses/workspace`
+- `PUT /admin/instructors/{instructorId}/courses`
+- `GET /admin/users/workspace` (관리자 권한 편집용 사용자/과정/현재 권한 조회)
+- `PUT /admin/users/{userId}/roles` (사용자 권한 저장: 강사/조교/학생)
+- `PUT /admin/courses/{courseId}/members/{userId}/role` (과정 단위 권한 매핑 저장)
+- `GET /courses/{courseId}/assignment-audit` (수업 단위 과제/수정 이력 조회; role-scope 적용)
 
-원칙:
-- axios 인스턴스는 여기서 관리
-- 기능별 API 함수 분리
-- 토큰 재발급과 에러 공통 처리도 여기서 관리
+타임라인 정합 규칙:
+1. 상세 페이지 `해당 학생` 탭은 `GET /submissions/{submissionId}`의 `timeline[]`을 그대로 사용한다.
+2. 상세 페이지 `과제 전체` 탭은 `GET /instructor/assignments/{assignmentId}/timeline`을 사용한다.
+3. `GET /submissions/{submissionId}`의 `timeline[]`은 선택 제출의 `학생 + 과제 revision 묶음` 범위 이벤트만 반환되어야 한다.
 
-### `src/store`
-전역 상태를 저장한다.
+권한 확장 규칙(관리자 중심):
+1. 전역 role(`admin|instructor|assistant|student`)과 과정 단위 role binding을 분리한다.
+2. 강사/조교의 리뷰 권한은 과정 단위 binding으로 판정하고, 프론트는 서버 응답 scope만 신뢰한다.
+3. 조교(assistant) 권한이 활성화되면 동일 제출 타임라인에 다중 리뷰어 이벤트가 자연스럽게 누적되어야 한다.
 
-예시:
-- 인증 사용자
-- 현재 수강 중 강의 정보
-- AI 채팅 UI 상태
+수업 계층형 이력 규칙:
+1. 관리자/강사/학생이 동일 이벤트 모델을 사용하되, 서버가 role-scope로 결과를 제한한다.
+2. 이벤트는 최소 `courseId, assignmentId, submissionId?, actorId, actorName, actorRole, action, occurredAt`를 포함해야 한다.
+3. 프론트는 과정 > 과제 > 수정 이벤트 순으로 렌더하고, 타임라인 클릭 시 해당 revision 상세와 동기화한다.
 
-### `src/types`
-프론트에서 공통으로 쓰는 타입 정의를 둔다.
+## 배포 서버 구조(권장)
+- Frontend/BFF: Next.js
+- Core API: NestJS
+- DB: Prisma + RDBMS
+- Storage/CDN: 파일 바이너리 저장 및 배포
 
----
-
-## 핵심 화면 설계 원칙
-### 1. LMS 기능이 먼저다
-AI 기능보다 먼저 강의 업로드/탐색/수강/진도 저장이 정상 동작해야 한다.
-
-최소 필수 화면:
-- 강의 목록
-- 강의 상세
-- 강의 수강 플레이어
-- 학생 내 강의 목록
-- 강사 강의 생성/수정
-
-### 2. AI는 수강 맥락 안에 들어가야 한다
-AI 기능은 별도 장식이 아니라 수강 화면 안에서 바로 써야 한다.
-
-예시:
-- 현재 강의 요약
-- 이 부분 쉽게 설명
-- 예상 문제 생성
-- 과제 초안 피드백
-
-### 3. 권한 없는 학생은 수강 UI를 보면 안 된다
-학생이 로그인만 했다고 바로 수강 플레이어에 들어가면 안 된다.
-
-프론트에서 해야 할 것:
-- 강의 상세에서 내 수강 상태 조회
-- `ACTIVE`가 아니면 수강 버튼 비활성화
-- 플레이어 접근 시 서버 응답이 403이면 안내 페이지로 이동
-
----
-
-## 추천 개발 순서
-### 1단계
-- 공통 레이아웃
-- 라우팅 구조
-- API 클라이언트
-- 인증 상태 저장
-
-### 2단계
-- 강의 목록 페이지
-- 강의 상세 페이지
-- 수강 권한 상태 표시
-
-### 3단계
-- 수강 플레이어 페이지
-- 커리큘럼 패널
-- 진도 저장
-
-### 4단계
-- 강사 강의 생성/수정
-- 영상/자료 업로드 UI
-- 과제/퀴즈 관리
-
-### 5단계
-- AI 챗 UI
-- 요약/퀴즈 변환 UI
-- 학생 위험도 및 추천 화면
-
----
-
-## 구현 팁
-### API 설계 팁
-- 강의 목록/상세 API와 수강 플레이어 API를 분리하라.
-- 상세 페이지는 권한이 없어도 일부 정보는 볼 수 있게 하고, 실제 학습 데이터는 별도 API로 가져와라.
-- 수강 플레이어 API는 항상 수강 권한을 전제로 설계하라.
-
-### 컴포넌트 설계 팁
-- 페이지 파일에는 데이터 조합만 두고, 실제 UI는 `features`로 빼라.
-- 강의 카드, 커리큘럼 리스트, 플레이어 패널은 재사용 가능하게 쪼개라.
-
-### 상태 관리 팁
-- 서버 상태는 React Query 계열 도입을 권장한다.
-- 전역 UI 상태만 Zustand에 두는 편이 낫다.
-- 수강 진도와 강의 데이터는 local state보다 서버 기준으로 관리하라.
-
-### UI/UX 팁
-- 수강 플레이어는 인프런처럼 커리큘럼과 영상 중심으로 단순하게 시작하라.
-- AI는 처음부터 화면 전체를 차지하게 하지 말고, 보조 패널로 붙여라.
-- 학생이 지금 무엇을 해야 하는지 한눈에 보이게 설계하라.
-
----
-
-## 권장 페이지 흐름
-1. 비로그인 사용자가 강의 목록과 상세를 본다.
-2. 로그인 후 수강 신청 또는 권한 부여 상태를 확인한다.
-3. 권한이 있는 학생만 `/learn`에서 플레이어를 연다.
-4. 수강 중 AI 요약, 질문, 퀴즈 생성 기능을 사용한다.
-5. 과제/퀴즈 결과와 진도가 학생 대시보드에 반영된다.
-
----
-
-## 주의사항
-- 권한 체크를 프론트만 믿으면 안 된다. 백엔드 403 처리를 전제로 UI를 설계해야 한다.
-- 강의, 섹션, 레슨, 진도 구조는 처음부터 타입을 명확히 잡아야 한다.
-- AI 응답은 길어지기 쉬우니 카드형 요약과 재질문 버튼 구조를 미리 고려하라.
-- 페이지를 빨리 많이 만드는 것보다, 강의 상세와 수강 플레이어 완성도를 먼저 올리는 편이 낫다.
-
----
-
-## 초기 우선 작업
-- `courses` 목록/상세 페이지 연결
-- `learn` 플레이어 레이아웃 구현
-- 수강 권한 상태 배지 구현
-- 강사 강의 생성 폼 구현
-- `api.ts` 기준 기능별 API 모듈 분리
+경계 원칙:
+1. Next.js는 UI/SSR/BFF에 집중.
+2. 권한/도메인 규칙은 API 서버에서 강제.
+3. 파일은 스토리지에 저장하고 API는 메타데이터만 관리.
