@@ -6,17 +6,43 @@ Next.js 15 App Router 기반 AI 교육 LMS 프론트엔드입니다.
 
 ## 시작하기
 
-**사전 요구사항:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) 설치
+기본 개발 경로는 Docker Compose입니다.
+
+사전 점검부터 하고 싶다면:
+
+```bash
+# macOS / Linux / WSL
+bash ./scripts/setup-dev.sh
+
+# 가능한 항목 자동 설치까지 시도
+bash ./scripts/setup-dev.sh --install
+```
+
+```powershell
+# Windows PowerShell
+powershell -ExecutionPolicy Bypass -File .\scripts\setup-dev.ps1
+
+# 가능한 항목 자동 설치까지 시도
+powershell -ExecutionPolicy Bypass -File .\scripts\setup-dev.ps1 -Install
+```
+
+위 스크립트는 WSL/Docker/Node/npm 존재 여부를 확인하고, 없으면 설치 명령 예시를 보여주며, `.env`가 없을 때 기본 `.env`도 만들어 줍니다.
 
 ```bash
 git clone <repo-url>
 cd front
-docker compose up
+make run
 ```
 
 브라우저에서 http://localhost:3000 접속
 
 처음 실행 시 `npm install` → 개발 서버 시작이 자동으로 진행됩니다.
+
+직접 compose 명령을 쓰고 싶다면 아래도 동일하게 동작합니다.
+
+```bash
+bash ./scripts/run-dev.sh
+```
 
 > 백엔드 API 기본 주소는 `http://localhost:4000`입니다.  
 > 백엔드가 없어도 API 실패 시 mock 데이터로 자동 전환되어 UI를 확인할 수 있습니다.
@@ -26,6 +52,9 @@ docker compose up
 ## 자주 쓰는 명령어
 
 ```bash
+make setup      # 사전 요구사항 점검 + .env 생성
+make env        # .env 생성
+make run        # clone 직후 실행용: setup 후 docker compose up
 make dev        # 개발 서버 실행 (= docker compose up)
 make logs       # 로그 스트리밍
 make test       # 단위 테스트 실행
@@ -51,10 +80,10 @@ make help       # 전체 명령어 목록
 
 ## 환경 변수
 
-`.env` 파일이 없어도 개발 서버가 실행됩니다. 백엔드 주소를 바꾸고 싶을 때만 설정하세요.
+`.env` 파일이 없어도 개발 서버가 실행됩니다. `make run` 또는 `bash ./scripts/run-dev.sh`를 쓰면 `.env`가 없을 때 자동 생성 후 실행합니다. `.env`만 먼저 만들고 싶다면 아래 명령을 사용하세요.
 
 ```bash
-cp .env.example .env
+npm run setup:env
 ```
 
 | 변수 | 기본값 | 설명 |
@@ -63,6 +92,7 @@ cp .env.example .env
 | `NEXT_PUBLIC_DEV_ROLE_BYPASS` | `false` | 개발 중 역할 bypass 허용 (`true` \| `false`) |
 
 > `NEXT_PUBLIC_*` 값은 프로덕션 Docker 이미지에서 빌드 시점에 번들에 포함됩니다.
+> 다른 API 주소가 필요하면 `node ./scripts/init-env.mjs --api-base-url=https://api.example.com --force`로 다시 생성하면 됩니다.
 
 ---
 
@@ -70,7 +100,7 @@ cp .env.example .env
 
 ```bash
 npm install
-cp .env.example .env   # (선택)
+npm run setup:env      # (선택)
 npm run dev            # 개발 서버 → http://localhost:3000
 npm run build          # 프로덕션 빌드
 npm run start          # 프로덕션 서버
@@ -260,3 +290,17 @@ docker compose -f docker-compose.prod.yml --env-file .env up -d --build
 | [`progress/progress_09.md`](./progress/progress_09.md) | 최신 진행 상황 (2026-04-13) |
 | [`progress/architecture.md`](./progress/architecture.md) | 백엔드 연동 아키텍처 |
 | [`CONTRIBUTING.md`](./CONTRIBUTING.md) | 기여 가이드 |
+
+---
+
+## 검증
+
+문서와 스크립트 추가 후 아래 항목을 확인했습니다.
+
+```bash
+node ./scripts/init-env.mjs --dry-run
+bash -n ./scripts/setup-dev.sh
+bash -n ./scripts/run-dev.sh
+```
+
+실제 `docker compose up`, 운영체제별 패키지 설치, Windows PowerShell 실행은 이 환경에서 직접 검증하지 못했습니다.
