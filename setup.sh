@@ -198,8 +198,9 @@ success "사전 요구사항 확인 완료"
 
 step "호스트 포트 점검"
 ENV_FILE="${ROOT_DIR}/.env"
-FRONT_HOST_PORT="$(read_env_var "${ENV_FILE}" "HOST_PORT")"
-[ -n "${FRONT_HOST_PORT}" ] || FRONT_HOST_PORT=3000
+
+# 항상 기본 포트에서 시작 (.env의 이전 값 무시)
+FRONT_HOST_PORT=3000
 RESOLVED_FRONT_HOST_PORT="$(resolve_port "${FRONT_HOST_PORT}")"
 
 if [ "${RESOLVED_FRONT_HOST_PORT}" != "${FRONT_HOST_PORT}" ]; then
