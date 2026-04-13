@@ -3,6 +3,15 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+AUTO_INSTALL=0
+
+for arg in "$@"; do
+  case "$arg" in
+    --install)
+      AUTO_INSTALL=1
+      ;;
+  esac
+done
 
 has_cmd() {
   command -v "$1" >/dev/null 2>&1
@@ -59,18 +68,73 @@ print_install_help() {
   esac
 }
 
+try_install() {
+  local target="$1"
+  local os_name
+  os_name="$(uname -s)"
+
+  case "${os_name}" in
+    Darwin)
+      if ! has_cmd brew; then
+        echo "[install] Homebrew가 없어 자동 설치를 건너뜁니다."
+        return
+      fi
+      case "${target}" in
+        docker)
+          brew install --cask docker
+          ;;
+        node)
+          brew install node
+          ;;
+      esac
+      ;;
+    Linux)
+      if is_wsl && [[ "${target}" == "docker" ]]; then
+        echo "[install] WSL에서는 Docker Desktop을 Windows에 설치해야 합니다."
+        return
+      fi
+
+      if ! has_cmd apt-get; then
+        echo "[install] apt-get이 없어 자동 설치를 건너뜁니다."
+        return
+      fi
+
+      sudo apt-get update
+
+      case "${target}" in
+        docker)
+          sudo apt-get install -y docker.io docker-compose-v2 docker-compose-plugin
+          ;;
+        node)
+          sudo apt-get install -y nodejs npm
+          ;;
+      esac
+      ;;
+  esac
+}
+
 MISSING=0
 
 if ! has_cmd docker; then
   echo "[missing] docker"
+  if [[ "${AUTO_INSTALL}" -eq 1 ]]; then
+    try_install docker
+  fi
   print_install_help docker
-  MISSING=1
+  if ! has_cmd docker; then
+    MISSING=1
+  fi
 fi
 
 if has_cmd docker && ! docker compose version >/dev/null 2>&1; then
   echo "[missing] docker compose plugin"
+  if [[ "${AUTO_INSTALL}" -eq 1 ]]; then
+    try_install docker
+  fi
   print_install_help docker
-  MISSING=1
+  if ! docker compose version >/dev/null 2>&1; then
+    MISSING=1
+  fi
 fi
 
 if ! has_cmd node || ! has_cmd npm; then

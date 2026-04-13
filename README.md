@@ -13,11 +13,17 @@ Next.js 15 App Router 기반 AI 교육 LMS 프론트엔드입니다.
 ```bash
 # macOS / Linux / WSL
 bash ./scripts/setup-dev.sh
+
+# 가능한 항목 자동 설치까지 시도
+bash ./scripts/setup-dev.sh --install
 ```
 
 ```powershell
 # Windows PowerShell
 powershell -ExecutionPolicy Bypass -File .\scripts\setup-dev.ps1
+
+# 가능한 항목 자동 설치까지 시도
+powershell -ExecutionPolicy Bypass -File .\scripts\setup-dev.ps1 -Install
 ```
 
 위 스크립트는 WSL/Docker/Node/npm 존재 여부를 확인하고, 없으면 설치 명령 예시를 보여주며, `.env`가 없을 때 기본 `.env`도 만들어 줍니다.
@@ -284,3 +290,17 @@ docker compose -f docker-compose.prod.yml --env-file .env up -d --build
 | [`progress/progress_09.md`](./progress/progress_09.md) | 최신 진행 상황 (2026-04-13) |
 | [`progress/architecture.md`](./progress/architecture.md) | 백엔드 연동 아키텍처 |
 | [`CONTRIBUTING.md`](./CONTRIBUTING.md) | 기여 가이드 |
+
+---
+
+## 검증
+
+문서와 스크립트 추가 후 아래 항목을 확인했습니다.
+
+```bash
+node ./scripts/init-env.mjs --dry-run
+bash -n ./scripts/setup-dev.sh
+bash -n ./scripts/run-dev.sh
+```
+
+실제 `docker compose up`, 운영체제별 패키지 설치, Windows PowerShell 실행은 이 환경에서 직접 검증하지 못했습니다.
