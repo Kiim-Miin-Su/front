@@ -26,11 +26,11 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 RESET='\033[0m'
 
-info()    { echo -e "${CYAN}[INFO]${RESET}  $*"; }
-success() { echo -e "${GREEN}[OK]${RESET}    $*"; }
-warn()    { echo -e "${YELLOW}[WARN]${RESET}  $*"; }
+info()    { echo -e "${CYAN}[INFO]${RESET}  $*" >&2; }
+success() { echo -e "${GREEN}[OK]${RESET}    $*" >&2; }
+warn()    { echo -e "${YELLOW}[WARN]${RESET}  $*" >&2; }
 error()   { echo -e "${RED}[ERROR]${RESET} $*" >&2; }
-step()    { echo -e "\n${BOLD}▶ $*${RESET}"; }
+step()    { echo -e "\n${BOLD}▶ $*${RESET}" >&2; }
 
 check_backend_health() {
   if command -v curl &>/dev/null; then
@@ -47,6 +47,11 @@ url = sys.argv[1]
 with urlopen(url, timeout=5) as response:
     raise SystemExit(0 if response.status == 200 else 1)
 PY
+    return $?
+  fi
+
+  if command -v powershell.exe >/dev/null 2>&1; then
+    powershell.exe -NoProfile -Command "\$response = Invoke-WebRequest -UseBasicParsing -Uri '${1}/healthz' -TimeoutSec 5 -ErrorAction SilentlyContinue; if (\$response -and \$response.StatusCode -eq 200) { exit 0 } else { exit 1 }" >/dev/null 2>&1
     return $?
   fi
 
@@ -114,18 +119,54 @@ PY
     return $?
   fi
 
+  if command -v powershell.exe >/dev/null 2>&1; then
+    powershell.exe -NoProfile -Command "\$connections = Get-NetTCPConnection -LocalPort ${port} -State Listen -ErrorAction SilentlyContinue; if (\$connections) { exit 0 } else { exit 1 }" >/dev/null 2>&1
+    return $?
+  fi
+
   return 1
 }
 
-find_available_port() {
-  local start_port="$1"
-  local port="${start_port}"
+# 해당 포트를 점유 중인 Docker 컨테이너 이름을 반환 (없으면 빈 문자열)
+get_docker_container_on_port() {
+  local port="$1"
+  docker ps --format '{{.Names}}\t{{.Ports}}' 2>/dev/null \
+    | awk -v p="${port}" '$0 ~ ":" p "->" { match($0, /^[^\t]+/); print substr($0, RSTART, RLENGTH) }' \
+    | head -n 1
+}
 
-  while is_port_in_use "${port}"; do
-    port=$((port + 1))
+# 포트를 점유한 Docker 컨테이너가 있으면 강제 제거 후 0 반환, 없으면 1 반환
+free_port_if_docker() {
+  local port="$1"
+  local container
+  container="$(get_docker_container_on_port "${port}")"
+  if [ -n "${container}" ]; then
+    warn "포트 ${port}를 사용 중인 Docker 컨테이너: ${container}"
+    info "컨테이너를 강제 제거합니다: ${container}"
+    docker rm -f "${container}" >/dev/null 2>&1
+    success "컨테이너 제거 완료 → 포트 ${port} 확보"
+    return 0
+  fi
+  return 1
+}
+
+# 포트 확보: Docker 컨테이너이면 제거 후 원래 포트 사용, 아니면 다음 빈 포트 탐색
+resolve_port() {
+  local port="$1"
+  if ! is_port_in_use "${port}"; then
+    printf "%s" "${port}"
+    return
+  fi
+  if free_port_if_docker "${port}"; then
+    printf "%s" "${port}"
+    return
+  fi
+  # 비-Docker 프로세스 점유 → 다음 빈 포트 탐색
+  local next="${port}"
+  while is_port_in_use "${next}"; do
+    next=$((next + 1))
   done
-
-  printf "%s" "${port}"
+  printf "%s" "${next}"
 }
 
 # ── 옵션 파싱 ─────────────────────────────────────────────
@@ -157,12 +198,13 @@ success "사전 요구사항 확인 완료"
 
 step "호스트 포트 점검"
 ENV_FILE="${ROOT_DIR}/.env"
-FRONT_HOST_PORT="$(read_env_var "${ENV_FILE}" "HOST_PORT")"
-[ -n "${FRONT_HOST_PORT}" ] || FRONT_HOST_PORT=3000
-RESOLVED_FRONT_HOST_PORT="$(find_available_port "${FRONT_HOST_PORT}")"
+
+# 항상 기본 포트에서 시작 (.env의 이전 값 무시)
+FRONT_HOST_PORT=3000
+RESOLVED_FRONT_HOST_PORT="$(resolve_port "${FRONT_HOST_PORT}")"
 
 if [ "${RESOLVED_FRONT_HOST_PORT}" != "${FRONT_HOST_PORT}" ]; then
-  warn "HOST_PORT ${FRONT_HOST_PORT} 사용 중 → ${RESOLVED_FRONT_HOST_PORT}로 변경"
+  warn "HOST_PORT ${FRONT_HOST_PORT} 사용 중 (비-Docker 프로세스) → ${RESOLVED_FRONT_HOST_PORT}로 변경"
 fi
 
 set_env_var "${ENV_FILE}" "HOST_PORT" "${RESOLVED_FRONT_HOST_PORT}"

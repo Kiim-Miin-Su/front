@@ -1,3 +1,7 @@
+"use client";
+
+import { useSyncExternalStore } from "react";
+
 import { resolveScheduleCheckInAvailability } from "@/features/attendance/attendance-check-in-availability";
 import { getScheduleTone } from "@/features/attendance/attendance-schedule-tone";
 import type { StudentScheduleEvent } from "@/types/attendance";
@@ -11,6 +15,7 @@ export function AttendanceEventDetail({
   events: StudentScheduleEvent[];
   onOpenAttendance: (eventId: string) => void;
 }) {
+  const now = useHydratedNow();
   if (!dateKey) {
     return (
       <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
@@ -34,9 +39,10 @@ export function AttendanceEventDetail({
         <div className="mt-4 space-y-3">
           {events.map((event) => {
             const tone = getScheduleTone(event.categoryLabel);
-            const checkInAvailability = event.requiresAttendanceCheck
-              ? resolveScheduleCheckInAvailability(event)
-              : { canCheckInNow: false, reason: undefined };
+            const checkInAvailability =
+              event.requiresAttendanceCheck && now
+                ? resolveScheduleCheckInAvailability(event, now)
+                : { canCheckInNow: false, reason: undefined };
             const checkInDisabled = event.requiresAttendanceCheck && !checkInAvailability.canCheckInNow;
 
             return (
@@ -103,4 +109,21 @@ function formatDateKey(dateKey: string) {
     day: "numeric",
     weekday: "long",
   }).format(date);
+}
+
+function useHydratedNow() {
+  const isHydrated = useSyncExternalStore(subscribeToHydration, getClientHydrationSnapshot, getServerHydrationSnapshot);
+  return isHydrated ? new Date() : null;
+}
+
+function subscribeToHydration() {
+  return () => {};
+}
+
+function getClientHydrationSnapshot() {
+  return true;
+}
+
+function getServerHydrationSnapshot() {
+  return false;
 }

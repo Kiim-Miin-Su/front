@@ -8,6 +8,16 @@ Next.js 15 App Router 기반 AI 교육 LMS 프론트엔드입니다.
 
 **사전 요구사항:** 가능한 경우 `./setup.sh`가 Docker 설치/실행을 우선 시도합니다.
 
+### 먼저 알아둘 점
+
+완전히 아무것도 없는 새 PC에서 `git clone` 직후 100% 무설치 자동 실행까지는 아닙니다. 아래 항목은 사용자가 직접 준비하거나 최초 1회 승인해야 할 수 있습니다.
+
+1. `Git` 또는 `Git Bash`
+2. 인터넷 연결
+3. Docker Desktop 최초 실행/권한 승인
+4. 회사 보안 정책 때문에 `brew`, `winget` 자동 설치가 막힌 경우의 수동 설치
+5. 실 API 연동을 원하면 sibling `back` 저장소
+
 ### 최소 설치물
 
 macOS:
@@ -23,6 +33,21 @@ Windows:
 3. `winget`은 자동 설치를 쓰고 싶을 때만 필요
 
 `front/setup.sh`는 Docker가 없거나 꺼져 있으면 자동 설치/실행을 시도합니다. 기본 실행은 실 API 연동 기준이며, mock 모드는 `--allow-mock`을 명시했을 때만 허용합니다.
+
+### 자동 설치가 안 되는 경우 직접 설치해야 하는 것
+
+macOS:
+
+1. `Git`이 없어서 저장소 clone 자체를 못 하는 경우
+2. `Homebrew`가 없고, 앱 설치를 CLI로 하고 싶지 않은 경우
+3. Docker Desktop 첫 실행에서 macOS 보안 승인/로그인이 필요한 경우
+
+Windows:
+
+1. `Git Bash`가 없어서 `./setup.sh`를 실행할 셸이 없는 경우
+2. `winget` 사용이 차단된 회사 PC
+3. Docker Desktop 첫 실행에서 관리자 권한 또는 WSL 연동 승인이 필요한 경우
+4. 실 API 연동을 위한 sibling `back` 저장소가 없는 경우
 
 ### 수동 설치 명령
 
@@ -78,7 +103,9 @@ Windows:
 
 1. Docker 설치 및 실행 여부 확인
 2. `.env` 파일 자동 생성 (없을 경우 개발 기본값으로 생성)
-3. 이미 사용 중인 `3000`을 피해서 빈 호스트 포트 자동 선택
+3. 포트 충돌 자동 해결:
+   - **Docker 컨테이너**가 `3000`을 점유 중이면 해당 컨테이너를 강제 제거하고 `3000` 사용
+   - **다른 프로세스**가 점유 중이면 빈 포트를 자동으로 탐색해 사용
 4. sibling `back` 저장소가 있으면 백엔드 먼저 실행
 5. Next.js 개발 서버 컨테이너 시작
 6. 컨테이너 내부: `npm install` → `next dev` 시작
@@ -180,6 +207,7 @@ npm test               # 단위 테스트
 
 ```
 front/
+├── public/                      # 정적 에셋
 ├── src/
 │   ├── app/                        # Next.js App Router
 │   │   ├── (auth)/sign-in/         # 로그인 페이지
@@ -191,14 +219,26 @@ front/
 │   │       ├── instructor/         # 강사 콘솔
 │   │       ├── submissions/        # 제출 상세
 │   │       └── admin/              # 관리자 운영
-│   ├── features/                   # 페이지별 UI 컴포넌트
+│   ├── features/                   # 도메인별 화면 조합 로직
+│   │   ├── admin/                  # 관리자 대시보드/운영 화면
+│   │   ├── attendance/             # 출석 이벤트, 체크인 상태, 상세 패널
+│   │   ├── course/                 # 강좌 카드, 상세 표시
+│   │   ├── home/                   # 공개 홈 섹션
+│   │   ├── learn/                  # 학습 허브 위젯
+│   │   └── submission/             # 제출 상세, 피드백, 첨부파일 UI
 │   ├── components/                 # 공통 UI 컴포넌트
+│   │   ├── auth/                   # 보호 라우트, 세션 관련 UI
+│   │   ├── layout/                 # 페이지 레이아웃 프레임
+│   │   ├── navigation/             # 헤더/사이드바/탭 이동
+│   │   └── providers/              # 전역 provider 래퍼
 │   ├── services/                   # API 호출 레이어 (axios + fallback)
+│   ├── lib/                        # 브라우저 저장소/유틸
 │   ├── store/auth-store.ts         # Zustand 인증 상태
-│   ├── lib/auth-storage.ts         # localStorage + 역할 쿠키 관리
+│   ├── config/                     # 네비게이션, 런타임 기본값
 │   ├── types/                      # TypeScript 타입 정의
-│   ├── config/                     # 네비게이션 설정
 │   └── middleware.ts               # 역할 기반 라우팅 보호
+├── scripts/                        # 개발 환경 보조 스크립트
+├── progress/                       # 작업 기록/진행 메모
 ├── tests/                          # 단위 테스트
 ├── setup.sh                        # 최초 설정 스크립트
 ├── Makefile                        # 자주 쓰는 명령어 단축키
@@ -206,6 +246,23 @@ front/
 ├── docker-compose.yml              # 개발 환경 (핫 리로드)
 └── .env.example                    # 환경 변수 템플릿
 ```
+
+### 폴더별 역할 요약
+
+| 경로 | 역할 |
+|------|------|
+| `src/app` | 라우트 엔트리와 페이지 조합 |
+| `src/features` | 도메인 단위 화면 기능 묶음 |
+| `src/components` | 여러 페이지에서 재사용하는 UI |
+| `src/services` | 백엔드 API 요청과 fallback 처리 |
+| `src/store` | 전역 상태 관리 |
+| `src/lib` | 브라우저 저장소/유틸리티 |
+| `src/config` | 라우트/메뉴/런타임 기본 설정 |
+| `src/types` | API 응답 및 화면 모델 타입 |
+| `public` | 이미지, 아이콘 등 정적 파일 |
+| `scripts` | 개발/초기화 스크립트 |
+| `progress` | 구현 진행 메모와 변경 기록 |
+| `tests` | 프론트 단위 테스트 |
 
 ---
 
